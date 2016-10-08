@@ -71,6 +71,52 @@ func (i *fileextSlice) Include(filename string) bool {
 
 var flagFileext fileextSlice
 
+//IncludeFile is the created const file, files are included in files ordered by extension.
+type IncludeFile struct {
+	Name     string
+	Ext      string
+	ExtNoDot string
+}
+
+func NewIncludeFile(f os.FileInfo) IncludeFile {
+	//var extension = filepath.Ext(f.Name())
+	var extensionNoDot = extension[1:len(extension)]
+	var name = "include" + extensionNoDot + ".go"
+	return IncludeFile{Name: name, Ext: extensionNoDot}
+}
+func makeIncludeExtMap(fs []os.FileInfo) map[string][]IncludeFile {
+	imap := map[string][]IncludeFile{}
+	for _, f := range fs {
+		if !flagFileext.Include(f.Name()) {
+			fmt.Println(f.Name() + " not included because has wrong extension.")
+			continue
+		}
+		imap[icFile.Ext] = NewIncludeFile(f)
+		return imap
+}
+
+func (imap) makeGoFiles(){
+
+}
+func getFilesExtMap() {
+	fs, _ := ioutil.ReadDir(".")
+	for _, f := range fs {
+		if !flagFileext.Include(f.Name()) {
+			fmt.Println(f.Name() + " not included because has wrong extension.")
+			continue
+		}
+		icFile := NewIncludeFile(f)
+		if staticFilesMap[extensionNoDot] == nil {
+			out, err := os.OpenFile("include"+extensionNoDot+".go", os.O_RDWR|os.O_CREATE, 0666)
+			if err != nil {
+				log.Fatalf("error opening file: %v", err)
+			}
+			out.Write([]byte("package main \n"))
+			staticFilesMap[extensionNoDot] = append(staticFilesMap[extensionNoDot], out)
+		}
+	}
+}
+
 // Reads all .txt files in the current folder
 // and encodes them as strings literals in textfiles.go
 func main() {
@@ -86,7 +132,7 @@ func main() {
 	}
 
 	fs, _ := ioutil.ReadDir(".")
-	staticFilesMap := map[string]*os.File{}
+	staticFilesMap := map[string][]*os.File{}
 
 	for _, f := range fs {
 		if !flagFileext.Include(f.Name()) {
@@ -101,7 +147,7 @@ func main() {
 				log.Fatalf("error opening file: %v", err)
 			}
 			out.Write([]byte("package main \n"))
-			staticFilesMap[extensionNoDot] = out
+			staticFilesMap[extensionNoDot] = append(staticFilesMap[extensionNoDot], out)
 		}
 		filename := f.Name()[0 : len(f.Name())-len(extension)]
 		out := staticFilesMap[extensionNoDot]
